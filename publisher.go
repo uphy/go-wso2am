@@ -21,10 +21,56 @@ type (
 		Status       string `json:"status"`
 		ThumbnailURI string `json:"thumbnailUri"`
 	}
-	APIAction string
+	APIDetail struct {
+		API
+		APIDefinition           string         `json:"apiDefinition"`
+		WSDLURI                 string         `json:"wsdlUri,omitempty"`
+		ResponseCaching         string         `json:"responseCaching"`
+		CacheTimeout            int            `json:"cacheTimeout"`
+		DestinationStatsEnabled string         `json:"destinationStatsEnabled,omitempty"`
+		DefaultVersion          bool           `json:"isDefaultVersion"`
+		Type                    string         `json:"type"`
+		APITransport            []APITransport `json:"transport"`
+		Tags                    []string       `json:"tags"`
+		Tiers                   []string       `json:"tiers"`
+		MaxTPS                  *struct {
+			Sandbox    int `json:"sandbox"`
+			Production int `json:"production"`
+		} `json:"maxTps,omitempty"`
+		Visibility       string   `json:"visibility"`
+		VisibleRoles     []string `json:"visibleRoles"`
+		EndpointConfig   string   `json:"endpointConfig"`
+		EndpointSecurity *struct {
+			UserName string `json:"username"`
+			Type     string `json:"type"`
+			Password string `json:"password"`
+		} `json:"endpointSecurity"`
+		GatewayEnvironments          string        `json:"gatewayEnvironments"`
+		Sequences                    []interface{} `json:"sequences,omitempty"`
+		SubscriptionAvailability     interface{}   `json:"subscriptionAvailability,omitempty"`
+		SubscriptionAvailableTenants interface{}   `json:"subscriptionAvailableTenants,omitempty"`
+		BusinessInformation          *struct {
+			BusinessOwnerEmail  string `json:"businessOwnerEmail"`
+			TechnicalOwnerEmail string `json:"technicalOwnerEmail"`
+			TechnicalOwner      string `json:"technicalOwner"`
+			BusinessOwner       string `json:"businessOwner"`
+		} `json:"businessInformation"`
+		CORSConfiguration *struct {
+			AccessControlAllowOrigins     []string `json:"accessControlAllowOrigins"`
+			AccessControlAllowHeaders     []string `json:"accessControlAllowHeaders"`
+			AccessControlAllowMethods     []string `json:"accessControlAllowMethods"`
+			AccessControlAllowCredentials bool     `json:"accessControlAllowCredentials"`
+			CORSConfigurationEnabled      bool     `json:"corsConfigurationEnabled"`
+		} `json:"corsConfiguration"`
+	}
+	APITransport string
+	APIAction    string
 )
 
 const (
+	APITransportHTTP  APITransport = "http"
+	APITransportHTTPs APITransport = "https"
+
 	APIActionPublish            APIAction = "Publish"
 	APIActionDeployAsPrototype  APIAction = "Deploy as a Prototype"
 	APIActionDemoteToCreated    APIAction = "Demote to Created"
@@ -60,13 +106,21 @@ func (c *Client) APIs(q *PageQuery) (*APIsResponse, error) {
 	return &v, nil
 }
 
-func (c *Client) ChangeAPIStatus(apiID string, action APIAction) error {
+func (c *Client) ChangeAPIStatus(id string, action APIAction) error {
 	params := url.Values{}
-	params.Add("apiId", apiID)
+	params.Add("apiId", id)
 	params.Add("action", string(action))
 	return c.post("api/am/publisher/v0.12/apis/change-lifecycle?"+params.Encode(), "apim:api_publish", nil)
 }
 
-func (c *Client) DeleteAPI(apiID string) error {
-	return c.delete("api/am/publisher/v0.12/apis/"+apiID, "apim:api_create", nil)
+func (c *Client) DeleteAPI(id string) error {
+	return c.delete("api/am/publisher/v0.12/apis/"+id, "apim:api_create", nil)
+}
+
+func (c *Client) API(id string) (*APIDetail, error) {
+	var v APIDetail
+	if err := c.get("api/am/publisher/v0.12/apis/"+id, "apim:api_view", &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
 }

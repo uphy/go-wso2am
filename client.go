@@ -107,7 +107,6 @@ func (c *Client) do(req *http.Request, v interface{}) error {
 		return err
 	}
 	b, err := ioutil.ReadAll(resp.Body)
-
 	if resp.Header.Get("Content-Type") == "application/json" {
 		if err != nil {
 			return err

@@ -16,6 +16,7 @@ func (c *CLI) api() cli.Command {
 			c.apiList(),
 			c.apiChangeStatus(),
 			c.apiDelete(),
+			c.apiInspect(),
 		},
 	}
 }
@@ -76,6 +77,27 @@ func (c *CLI) apiDelete() cli.Command {
 			}
 			id := ctx.Args().Get(0)
 			return c.client.DeleteAPI(id)
+		},
+	}
+}
+
+func (c *CLI) apiInspect() cli.Command {
+	return cli.Command{
+		Name:      "inspect",
+		Aliases:   []string{"show", "cat"},
+		Usage:     "Inspect the API",
+		ArgsUsage: "ID",
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() != 1 {
+				return errors.New("ID is required")
+			}
+			id := ctx.Args().Get(0)
+			api, err := c.client.API(id)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%#v", api)
+			return nil
 		},
 	}
 }
