@@ -3,6 +3,7 @@ package wso2am
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -69,12 +70,35 @@ func (c *Client) endpointToken(path string) string {
 
 func (c *Client) get(path string, scope string, v interface{}) error {
 	req, _ := http.NewRequest("GET", c.endpointCarbon(path), nil)
+	if err := c.auth(scope, req); err != nil {
+		return err
+	}
+	return c.do(req, &v)
+}
+
+func (c *Client) post(path string, scope string, v interface{}) error {
+	req, _ := http.NewRequest("POST", c.endpointCarbon(path), nil)
+	if err := c.auth(scope, req); err != nil {
+		return err
+	}
+	return c.do(req, &v)
+}
+
+func (c *Client) delete(path string, scope string, v interface{}) error {
+	req, _ := http.NewRequest("DELETE", c.endpointCarbon(path), nil)
+	if err := c.auth(scope, req); err != nil {
+		return err
+	}
+	return c.do(req, &v)
+}
+
+func (c *Client) auth(scope string, req *http.Request) error {
 	token, err := c.GenerateAccessToken(scope)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Authorization", "Bearer "+token.AccessToken)
-	return c.do(req, &v)
+	return nil
 }
 
 func (c *Client) do(req *http.Request, v interface{}) error {
@@ -83,8 +107,18 @@ func (c *Client) do(req *http.Request, v interface{}) error {
 		return err
 	}
 	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+
+	if resp.Header.Get("Content-Type") == "application/json" {
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(b, &v)
+		if err != nil {
+			return err
+		}
 	}
-	return json.Unmarshal(b, &v)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status(%s) != 200: %s", resp.Status, string(b))
+	}
+	return err
 }
