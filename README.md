@@ -8,6 +8,10 @@ WSO2 API Manager product api client.
 
 ### Install
 
+Download from [release page](https://github.com/uphy/go-wso2am/releases) and extract the archive.
+
+Otherwise you can build the latest source by the following command.
+
 ```bash
 $ go get -u github.com/uphy/go-wso2am/wso2am-cli
 ```

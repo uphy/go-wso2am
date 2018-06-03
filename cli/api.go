@@ -232,6 +232,9 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 				Name: "version",
 			},
 			cli.StringFlag{
+				Name: "provider",
+			},
+			cli.StringFlag{
 				Name:  "production-url",
 				Value: "http://localhost/",
 			},
@@ -250,6 +253,12 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			if update {
 				if ctx.NArg() != 1 {
 					return errors.New("APIID is required")
+				}
+				unmodifiableFlags := []string{"name", "version", "context", "provider", "state"}
+				for _, f := range unmodifiableFlags {
+					if ctx.IsSet(f) {
+						return fmt.Errorf(`"Cannot update %v"`, unmodifiableFlags)
+					}
 				}
 			} else {
 				if err := c.checkRequiredParameters(ctx, "definition", "name", "context", "version", "production-url", "gateway-env"); err != nil {
@@ -288,6 +297,9 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			}
 			if ctx.IsSet("gateway-env") {
 				api.GatewayEnvironments = ctx.String("gateway-env")
+			}
+			if ctx.IsSet("provider") {
+				api.Provider = ctx.String("provider")
 			}
 
 			// endpoint config
