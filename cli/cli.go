@@ -8,6 +8,8 @@ import (
 	"github.com/urfave/cli"
 )
 
+const Version = "0.0.1"
+
 type CLI struct {
 	app    *cli.App
 	client *wso2am.Client
@@ -15,6 +17,7 @@ type CLI struct {
 
 func New() *CLI {
 	app := cli.NewApp()
+	app.Version = Version
 	c := &CLI{
 		app: app,
 	}
