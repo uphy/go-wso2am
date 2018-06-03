@@ -1,10 +1,12 @@
 package wso2am
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -30,7 +32,7 @@ type (
 	// https://github.com/wso2/carbon-apimgt/blob/master/components/apimgt/org.wso2.carbon.apimgt.rest.api.publisher/src/gen/java/org/wso2/carbon/apimgt/rest/api/publisher/dto/APIDTO.java
 	APIDetail struct {
 		API
-		Definition                   string                  `json:"apiDefinition,omitempty"`
+		Definition                   APIDefinition           `json:"apiDefinition,omitempty"`
 		WSDLURI                      *string                 `json:"wsdlUri,omitempty"`
 		ResponseCaching              string                  `json:"responseCaching"`
 		CacheTimeout                 int                     `json:"cacheTimeout"`
@@ -89,6 +91,7 @@ type (
 		URL    string      `json:"url"`
 		Config interface{} `json:"config"`
 	}
+	APIDefinition string
 	APIVisibility string
 	APITransport  string
 	APIAction     string
@@ -179,10 +182,10 @@ func (a *APIDetail) SetEndpointConfig(endpointConfig *APIEndpointConfig) {
 	a.EndpointConfig = string(data)
 }
 
-func (a *APIDetail) SetDefinitionFromFile(path string) error {
+func NewAPIDefinitionFromFile(path string) (APIDefinition, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 
@@ -190,38 +193,36 @@ func (a *APIDetail) SetDefinitionFromFile(path string) error {
 	ext = strings.ToLower(ext)
 	switch ext {
 	case ".json":
-		return a.SetDefinitionFromJSON(f)
+		return NewAPIDefinitionFromJSON(f)
 	case ".yaml", ".yml":
-		return a.SetDefinitionFromYAML(f)
+		return NewAPIDefinitionFromYAML(f)
 	default:
-		return fmt.Errorf("unsupported swagger file format: %s", path)
+		return "", fmt.Errorf("unsupported swagger file format: %s", path)
 	}
 }
 
-func (a *APIDetail) SetDefinitionFromJSON(r io.Reader) error {
+func NewAPIDefinitionFromJSON(r io.Reader) (APIDefinition, error) {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		return err
+		return "", err
 	}
-	a.Definition = string(data)
-	return nil
+	return APIDefinition(data), nil
 }
 
-func (a *APIDetail) SetDefinitionFromYAML(r io.Reader) error {
+func NewAPIDefinitionFromYAML(r io.Reader) (APIDefinition, error) {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var v map[string]interface{}
 	if err := yaml.Unmarshal(data, &v); err != nil {
-		return err
+		return "", err
 	}
 	j, err := json.Marshal(v)
 	if err != nil {
-		return err
+		return "", err
 	}
-	a.Definition = string(j)
-	return nil
+	return APIDefinition(j), nil
 }
 
 func (a *APIsResponse) APIs() []API {
@@ -294,6 +295,23 @@ func (c *Client) createAPI(api *APIDetail, update bool) (*APIDetail, error) {
 func (c *Client) APIDefinition(id string) (map[string]interface{}, error) {
 	var v map[string]interface{}
 	if err := c.get("api/am/publisher/v0.12/apis/"+id+"/swagger", "apim:api_view", &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (c *Client) UpdateAPIDefinition(id string, definition APIDefinition) (map[string]interface{}, error) {
+	buf := new(bytes.Buffer)
+	writer := multipart.NewWriter(buf)
+	w, err := writer.CreateFormField("apiDefinition")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.WriteString(w, string(definition)); err != nil {
+		return nil, err
+	}
+	var v map[string]interface{}
+	if err := c.put("api/am/publisher/v0.12/apis/"+id+"/swagger", "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
 		return nil, err
 	}
 	return v, nil

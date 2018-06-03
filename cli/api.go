@@ -19,6 +19,7 @@ func (c *CLI) api() cli.Command {
 			c.apiDelete(),
 			c.apiInspect(),
 			c.apiSwagger(),
+			c.apiUpdateSwagger(),
 			c.apiCreate(true),
 			c.apiCreate(false),
 		},
@@ -135,6 +136,28 @@ func (c *CLI) apiSwagger() cli.Command {
 	}
 }
 
+func (c *CLI) apiUpdateSwagger() cli.Command {
+	return cli.Command{
+		Name:      "update-swagger",
+		Usage:     "Update the API definition",
+		ArgsUsage: "ID SWAGGERFILE",
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() != 2 {
+				return errors.New("ID and SWAGGERFILE is required")
+			}
+			id := ctx.Args().Get(0)
+			def, err := wso2am.NewAPIDefinitionFromFile(ctx.Args().Get(1))
+			if err != nil {
+				return err
+			}
+			if _, err := c.client.UpdateAPIDefinition(id, def); err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+}
+
 func (c *CLI) apiCreate(update bool) cli.Command {
 	var commandName string
 	var commandAliases []string
@@ -207,9 +230,11 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 
 			if ctx.IsSet("definition") {
 				swaggerFile := ctx.String("definition")
-				if err := api.SetDefinitionFromFile(swaggerFile); err != nil {
+				def, err := wso2am.NewAPIDefinitionFromFile(swaggerFile)
+				if err != nil {
 					return err
 				}
+				api.Definition = def
 			}
 			if ctx.IsSet("name") {
 				api.Name = ctx.String("name")

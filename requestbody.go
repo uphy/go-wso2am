@@ -20,6 +20,10 @@ type (
 	formRequestBody struct {
 		url.Values
 	}
+	binaryRequestBody struct {
+		data        []byte
+		contentType string
+	}
 )
 
 func newFormRequestBody() *formRequestBody {
@@ -46,5 +50,15 @@ func (j *jsonRequestBody) writeTo(req *http.Request) error {
 		return err
 	}
 	req.Body = ioutil.NopCloser(bytes.NewReader(body))
+	return nil
+}
+
+func newBinaryRequestBody(data []byte, contentType string) *binaryRequestBody {
+	return &binaryRequestBody{data, contentType}
+}
+
+func (b *binaryRequestBody) writeTo(req *http.Request) error {
+	req.Header.Add("Content-Type", b.contentType)
+	req.Body = ioutil.NopCloser(bytes.NewReader(b.data))
 	return nil
 }
