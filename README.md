@@ -1,5 +1,7 @@
 # go-wso2am
 
+[![Build Status](https://travis-ci.org/uphy/go-wso2am.svg?branch=master)](https://travis-ci.org/uphy/go-wso2am)
+
 WSO2 API Manager product api client.
 
 ## CLI
