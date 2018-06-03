@@ -1,7 +1,6 @@
 package wso2am
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,11 +26,7 @@ type PageQuery struct {
 }
 
 func (c *Client) RegisterClient(clientInfo *ClientInfo) (clientID string, clientSecret string, err error) {
-	bodyBytes, err := json.Marshal(clientInfo)
-	if err != nil {
-		return "", "", err
-	}
-	req, err := http.NewRequest("POST", c.endpointCarbon("client-registration/v0.12/register"), bytes.NewReader(bodyBytes))
+	req, err := http.NewRequest("POST", c.endpointCarbon("client-registration/v0.12/register"), nil)
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(c.config.UserName, c.config.Password)
 	if err != nil {
@@ -44,7 +39,7 @@ func (c *Client) RegisterClient(clientInfo *ClientInfo) (clientID string, client
 		ClientID     string  `json:"clientId"`
 		ClientSecret string  `json:"clientSecret"`
 	}{}
-	if err := c.do(req, &r); err != nil {
+	if err := c.do(req, newJSONRequestBody(clientInfo), &r); err != nil {
 		return "", "", err
 	}
 	return r.ClientID, r.ClientSecret, nil

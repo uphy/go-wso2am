@@ -1,9 +1,7 @@
 package wso2am
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 )
 
 type AccessToken struct {
@@ -15,13 +13,17 @@ type AccessToken struct {
 }
 
 func (c *Client) GenerateAccessToken(scope string) (*AccessToken, error) {
-	body := fmt.Sprintf("grant_type=password&username=%s&password=%s&scope=%s", c.config.UserName, c.config.Password, scope)
-	req, _ := http.NewRequest("POST", c.endpointToken("token"), strings.NewReader(body))
+	body := newFormRequestBody()
+	body.Add("grant_type", "password")
+	body.Add("username", c.config.UserName)
+	body.Add("password", c.config.Password)
+	body.Add("scope", scope)
+	req, _ := http.NewRequest("POST", c.endpointToken("token"), nil)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.SetBasicAuth(c.config.ClientID, c.config.ClientSecret)
 
 	var v AccessToken
-	if err := c.do(req, &v); err != nil {
+	if err := c.do(req, body, &v); err != nil {
 		return nil, err
 	}
 	return &v, nil

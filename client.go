@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -75,23 +74,23 @@ func (c *Client) get(path string, scope string, v interface{}) error {
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, &v)
+	return c.do(req, nil, &v)
 }
 
-func (c *Client) post(path string, scope string, body io.Reader, v interface{}) error {
-	req, _ := http.NewRequest("POST", c.endpointCarbon(path), body)
+func (c *Client) post(path string, scope string, body requestBody, v interface{}) error {
+	req, _ := http.NewRequest("POST", c.endpointCarbon(path), nil)
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, &v)
+	return c.do(req, body, &v)
 }
 
-func (c *Client) put(path string, scope string, body io.Reader, v interface{}) error {
-	req, _ := http.NewRequest("PUT", c.endpointCarbon(path), body)
+func (c *Client) put(path string, scope string, body requestBody, v interface{}) error {
+	req, _ := http.NewRequest("PUT", c.endpointCarbon(path), nil)
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, &v)
+	return c.do(req, body, &v)
 }
 
 func (c *Client) delete(path string, scope string, v interface{}) error {
@@ -99,7 +98,7 @@ func (c *Client) delete(path string, scope string, v interface{}) error {
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, &v)
+	return c.do(req, nil, &v)
 }
 
 func (c *Client) auth(scope string, req *http.Request) error {
@@ -111,9 +110,9 @@ func (c *Client) auth(scope string, req *http.Request) error {
 	return nil
 }
 
-func (c *Client) do(req *http.Request, v interface{}) error {
-	if req.Body != nil {
-		req.Header.Add("Content-Type", "application/json")
+func (c *Client) do(req *http.Request, body requestBody, v interface{}) error {
+	if body != nil {
+		body.writeTo(req)
 	}
 
 	resp, err := c.client.Do(req)

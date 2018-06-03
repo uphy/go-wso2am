@@ -1,9 +1,7 @@
 package wso2am
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -280,21 +278,13 @@ func (c *Client) UpdateAPI(api *APIDetail) (*APIDetail, error) {
 }
 
 func (c *Client) createAPI(api *APIDetail, update bool) (*APIDetail, error) {
-	if api == nil {
-		return nil, errors.New("api == nil")
-	}
-	body, err := json.Marshal(api)
-	if err != nil {
-		return nil, err
-	}
-
 	var v APIDetail
 	if update {
-		if err := c.put("api/am/publisher/v0.12/apis/"+api.ID, "apim:api_create", bytes.NewReader(body), &v); err != nil {
+		if err := c.put("api/am/publisher/v0.12/apis/"+api.ID, "apim:api_create", newJSONRequestBody(api), &v); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := c.post("api/am/publisher/v0.12/apis", "apim:api_create", bytes.NewReader(body), &v); err != nil {
+		if err := c.post("api/am/publisher/v0.12/apis", "apim:api_create", newJSONRequestBody(api), &v); err != nil {
 			return nil, err
 		}
 	}

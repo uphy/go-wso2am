@@ -205,7 +205,7 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 				api = c.client.NewAPI()
 			}
 
-			if ctx.IsSet("swaggerFile") {
+			if ctx.IsSet("definition") {
 				swaggerFile := ctx.String("definition")
 				if err := api.SetDefinitionFromFile(swaggerFile); err != nil {
 					return err
