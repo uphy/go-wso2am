@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/uphy/go-wso2am"
 
@@ -11,8 +10,9 @@ import (
 
 func (c *CLI) subscription() cli.Command {
 	return cli.Command{
-		Name:  "subscription",
-		Usage: "Subscription management command",
+		Name:    "subscription",
+		Aliases: []string{"s"},
+		Usage:   "Subscription management command",
 		Subcommands: cli.Commands{
 			c.subscriptionList(),
 			c.subscriptionInspect(),
@@ -33,8 +33,9 @@ func (c *CLI) subscriptionList() cli.Command {
 			if err != nil {
 				return err
 			}
+			f := newTableFormatter("ID", "ApplicationID", "APIID", "Status")
 			for _, s := range resp.Subscriptions() {
-				fmt.Println(s.ID)
+				f.Row(s.ID, s.ApplicationID, s.APIIdentifier, s.Status)
 			}
 			return nil
 		},
@@ -56,8 +57,7 @@ func (c *CLI) subscriptionInspect() cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%#v\n", s)
-			return nil
+			return c.inspect(s)
 		},
 	}
 }
@@ -84,11 +84,10 @@ func (c *CLI) subscriptionBlock() cli.Command {
 				return errors.New("ID is required")
 			}
 			id := ctx.Args().Get(0)
-			s, err := c.client.BlockSubscription(id, state)
+			_, err := c.client.BlockSubscription(id, state)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%#v\n", s)
 			return nil
 		},
 	}
@@ -104,11 +103,10 @@ func (c *CLI) subscriptionUnblock() cli.Command {
 				return errors.New("ID is required")
 			}
 			id := ctx.Args().Get(0)
-			s, err := c.client.UnblockSubscription(id)
+			_, err := c.client.UnblockSubscription(id)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%#v\n", s)
 			return nil
 		},
 	}

@@ -3,26 +3,28 @@ package wso2am
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
 
-type Config struct {
-	EndpointToken  string
-	EndpointCarbon string
+type (
+	Config struct {
+		EndpointToken  string
+		EndpointCarbon string
 
-	ClientName   string
-	ClientID     string
-	ClientSecret string
-	UserName     string
-	Password     string
-}
-
-type Client struct {
-	config *Config
-	client *http.Client
-}
+		ClientName   string
+		ClientID     string
+		ClientSecret string
+		UserName     string
+		Password     string
+	}
+	Client struct {
+		config *Config
+		client *http.Client
+	}
+)
 
 func New(config *Config) (*Client, error) {
 	c := &http.Client{
@@ -76,8 +78,16 @@ func (c *Client) get(path string, scope string, v interface{}) error {
 	return c.do(req, &v)
 }
 
-func (c *Client) post(path string, scope string, v interface{}) error {
-	req, _ := http.NewRequest("POST", c.endpointCarbon(path), nil)
+func (c *Client) post(path string, scope string, body io.Reader, v interface{}) error {
+	req, _ := http.NewRequest("POST", c.endpointCarbon(path), body)
+	if err := c.auth(scope, req); err != nil {
+		return err
+	}
+	return c.do(req, &v)
+}
+
+func (c *Client) put(path string, scope string, body io.Reader, v interface{}) error {
+	req, _ := http.NewRequest("PUT", c.endpointCarbon(path), body)
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
@@ -102,55 +112,25 @@ func (c *Client) auth(scope string, req *http.Request) error {
 }
 
 func (c *Client) do(req *http.Request, v interface{}) error {
+	if req.Body != nil {
+		req.Header.Add("Content-Type", "application/json")
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return err
+		return c.apiError(req, resp, err)
 	}
 	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return c.apiError(req, resp, errors.New("failed to read response body"))
+	}
 	if resp.Header.Get("Content-Type") == "application/json" {
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(b, &v)
-		if err != nil {
-			return err
+		if err := json.Unmarshal(b, &v); err != nil {
+			return c.apiError(req, resp, errors.New("failed to unmarshal json response body"))
 		}
 	}
-	if resp.StatusCode != 200 {
-		return c.apiError(req, resp, b)
+	if resp.StatusCode/100 != 2 {
+		return c.apiErrorWithResponseBody(req, resp, b)
 	}
-	return err
-}
-
-type errorMessage struct {
-	Code        int           `json:"code"`
-	Message     string        `json:"message"`
-	Description string        `json:"description"`
-	MoreInfo    string        `json:"moreInfo"`
-	Error       []interface{} `json:"error"`
-}
-
-func (e errorMessage) String() string {
-	var errStr string
-	if len(e.Error) == 0 {
-		errStr = ""
-	} else {
-		errStr = fmt.Sprintf("%#v", e.Error)
-	}
-	return fmt.Sprintf("%s: %s (moreInfo=%v, error=%v)", e.Message, e.Description, e.MoreInfo, errStr)
-}
-
-func (c *Client) apiError(req *http.Request, resp *http.Response, body []byte) error {
-	var detail string
-	if len(body) == 0 {
-		detail = ""
-	} else {
-		var e errorMessage
-		if err := json.Unmarshal(body, &e); err != nil {
-			detail = ""
-		} else {
-			detail = fmt.Sprint(e.String())
-		}
-	}
-	return fmt.Errorf("API error.  (status=%s, detail=%s, url=%v, method=%s)", resp.Status, detail, req.URL, req.Method)
+	return nil
 }

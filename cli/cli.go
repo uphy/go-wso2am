@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
+
 	wso2am "github.com/uphy/go-wso2am"
 	"github.com/urfave/cli"
 )
@@ -80,6 +83,24 @@ func New() *CLI {
 
 func (c *CLI) addCommand(cmd cli.Command) {
 	c.app.Commands = append(c.app.Commands, cmd)
+}
+
+func (c *CLI) checkRequiredParameters(ctx *cli.Context, parameters ...string) error {
+	for _, p := range parameters {
+		if !ctx.IsSet(p) {
+			return fmt.Errorf(`"%s" is not set.  (required flags: %v)`, p, parameters)
+		}
+	}
+	return nil
+}
+
+func (c *CLI) inspect(v interface{}) error {
+	d, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(d))
+	return nil
 }
 
 func (c *CLI) Run(args []string) error {

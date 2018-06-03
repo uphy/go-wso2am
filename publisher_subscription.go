@@ -57,7 +57,7 @@ func (c *Client) Subscription(id string) (*Subscription, error) {
 
 func (c *Client) BlockSubscription(id string, state SubscriptionBlockState) (*Subscription, error) {
 	var v Subscription
-	if err := c.post(fmt.Sprintf("api/am/publisher/v0.12/subscriptions/block-subscription?subscriptionId=%s&blockState=%v", id, state), "apim:subscription_block", &v); err != nil {
+	if err := c.post(fmt.Sprintf("api/am/publisher/v0.12/subscriptions/block-subscription?subscriptionId=%s&blockState=%v", id, state), "apim:subscription_block", nil, &v); err != nil {
 		return nil, err
 	}
 	return &v, nil
@@ -65,7 +65,7 @@ func (c *Client) BlockSubscription(id string, state SubscriptionBlockState) (*Su
 
 func (c *Client) UnblockSubscription(id string) (*Subscription, error) {
 	var v Subscription
-	if err := c.post("api/am/publisher/v0.12/subscriptions/unblock-subscription?subscriptionId="+id, "apim:subscription_block", &v); err != nil {
+	if err := c.post("api/am/publisher/v0.12/subscriptions/unblock-subscription?subscriptionId="+id, "apim:subscription_block", nil, &v); err != nil {
 		return nil, err
 	}
 	return &v, nil

@@ -10,13 +10,17 @@ import (
 
 func (c *CLI) api() cli.Command {
 	return cli.Command{
-		Name:  "api",
-		Usage: "API management command",
+		Name:    "api",
+		Aliases: []string{"a"},
+		Usage:   "API management command",
 		Subcommands: cli.Commands{
 			c.apiList(),
 			c.apiChangeStatus(),
 			c.apiDelete(),
 			c.apiInspect(),
+			c.apiSwagger(),
+			c.apiCreate(true),
+			c.apiCreate(false),
 		},
 	}
 }
@@ -38,9 +42,11 @@ func (c *CLI) apiList() cli.Command {
 			if err != nil {
 				return err
 			}
+			f := newTableFormatter("ID", "Name", "Version", "Description", "Status")
 			for _, api := range resp.APIs() {
-				fmt.Println(api.ID)
+				f.Row(api.ID, api.Name, api.Version, api.Description, api.Status)
 			}
+			f.Flush()
 			return nil
 		},
 	}
@@ -105,7 +111,144 @@ func (c *CLI) apiInspect() cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%#v\n", api)
+			return c.inspect(api)
+		},
+	}
+}
+
+func (c *CLI) apiSwagger() cli.Command {
+	return cli.Command{
+		Name:      "swagger",
+		Usage:     "Inspect the API definition",
+		ArgsUsage: "ID",
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() != 1 {
+				return errors.New("ID is required")
+			}
+			id := ctx.Args().Get(0)
+			def, err := c.client.APIDefinition(id)
+			if err != nil {
+				return err
+			}
+			return c.inspect(def)
+		},
+	}
+}
+
+func (c *CLI) apiCreate(update bool) cli.Command {
+	var commandName string
+	var commandAliases []string
+	var commandUsage string
+	var commandArgsUsage string
+	if update {
+		commandName = "update"
+		commandUsage = "Update the API"
+		commandArgsUsage = "ID"
+	} else {
+		commandName = "create"
+		commandAliases = []string{"new"}
+		commandUsage = "Create the API"
+	}
+	return cli.Command{
+		Name:      commandName,
+		Aliases:   commandAliases,
+		Usage:     commandUsage,
+		ArgsUsage: commandArgsUsage,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name: "definition",
+			},
+			cli.StringFlag{
+				Name: "name",
+			},
+			cli.StringFlag{
+				Name: "context",
+			},
+			cli.StringFlag{
+				Name: "version",
+			},
+			cli.StringFlag{
+				Name:  "production-url",
+				Value: "http://localhost/",
+			},
+			cli.StringFlag{
+				Name:  "sandbox-url",
+				Value: "http://localhost/",
+			},
+			cli.StringFlag{
+				Name: "gateway-env",
+			},
+			cli.BoolFlag{
+				Name: "publish,P",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			if err := c.checkRequiredParameters(ctx, "definition", "name", "context", "version", "production-url", "gateway-env"); err != nil {
+				return err
+			}
+			if update {
+				if ctx.NArg() != 1 {
+					return errors.New("APIID is required")
+				}
+			}
+			swaggerFile := ctx.String("definition")
+
+			var api *wso2am.APIDetail
+			if update {
+				id := ctx.Args().First()
+				a, err := c.client.API(id)
+				if err != nil {
+					return err
+				}
+				api = a
+			} else {
+				api = c.client.NewAPI()
+			}
+			if err := api.SetDefinitionFromFile(swaggerFile); err != nil {
+				return err
+			}
+			api.Name = ctx.String("name")
+			api.Context = ctx.String("context")
+			api.Version = ctx.String("version")
+			api.GatewayEnvironments = ctx.String("gateway-env")
+
+			// endpoint config
+			endpointConfig := &wso2am.APIEndpointConfig{
+				Type: "http",
+			}
+			var productionURL = ctx.String("production-url")
+			var sandboxURL = ctx.String("sandbox-url")
+			endpointConfig.ProductionEndpoints = &wso2am.APIEndpoint{
+				URL: productionURL,
+			}
+			if sandboxURL != "" {
+				endpointConfig.SandboxEndpoints = &wso2am.APIEndpoint{
+					URL: sandboxURL,
+				}
+			}
+			api.SetEndpointConfig(endpointConfig)
+
+			// call API
+			var res *wso2am.APIDetail
+			var err error
+			if update {
+				res, err = c.client.UpdateAPI(api)
+			} else {
+				res, err = c.client.CreateAPI(api)
+			}
+			if err != nil {
+				return err
+			}
+
+			// print the ID of the created API
+			if !update {
+				fmt.Println(res.ID)
+			}
+
+			// publish
+			if ctx.Bool("publish") {
+				return c.client.ChangeAPIStatus(res.ID, wso2am.APIActionPublish)
+			}
 			return nil
 		},
 	}
