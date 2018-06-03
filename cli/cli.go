@@ -36,16 +36,32 @@ func New() *CLI {
 			EnvVar: "WSO2_PASSWORD",
 			Value:  "admin",
 		},
+		cli.StringFlag{
+			Name:   "client,c",
+			EnvVar: "WSO2_CLIENT_NAME",
+			Value:  "wso2am-cli-client",
+		},
+		cli.StringFlag{
+			Name:   "client-id,ci",
+			EnvVar: "WSO2_CLIENT_ID",
+			Value:  "", // Automatically register client
+		},
+		cli.StringFlag{
+			Name:   "client-secret,cs",
+			EnvVar: "WSO2_CLIENT_SECRET",
+			Value:  "", // Automatically register client
+		},
 	}
 	app.Before = func(ctx *cli.Context) error {
 		carbonURL := ctx.String("url-carbon")
 		tokenURL := ctx.String("url-token")
 		user := ctx.String("user")
 		password := ctx.String("password")
+		clientName := ctx.String("client")
 		client, err := wso2am.New(&wso2am.Config{
 			EndpointCarbon: carbonURL,
 			EndpointToken:  tokenURL,
-			ClientName:     "test",
+			ClientName:     clientName,
 			UserName:       user,
 			Password:       password,
 		})
@@ -57,6 +73,7 @@ func New() *CLI {
 	}
 
 	c.addCommand(c.api())
+	c.addCommand(c.subscription())
 
 	return c
 }

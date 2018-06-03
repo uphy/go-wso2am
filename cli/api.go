@@ -26,11 +26,20 @@ func (c *CLI) apiList() cli.Command {
 		Name:    "list",
 		Aliases: []string{"ls", "dir"},
 		Usage:   "List APIs",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "query,q",
+				Value: "",
+			},
+		},
 		Action: func(ctx *cli.Context) error {
-			resp, _ := c.client.APIs(nil)
+			var query = ctx.String("query")
+			resp, err := c.client.SearchAPIs(query, nil)
+			if err != nil {
+				return err
+			}
 			for _, api := range resp.APIs() {
 				fmt.Println(api.ID)
-				c.client.ChangeAPIStatus(api.ID, wso2am.APIActionPublish)
 			}
 			return nil
 		},
@@ -96,7 +105,7 @@ func (c *CLI) apiInspect() cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%#v", api)
+			fmt.Printf("%#v\n", api)
 			return nil
 		},
 	}

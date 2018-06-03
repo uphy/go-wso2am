@@ -32,7 +32,7 @@ func New(config *Config) (*Client, error) {
 	}
 	client := &Client{config, c}
 	if config.ClientID == "" || config.ClientSecret == "" {
-		id, secret, err := client.RegisterClient(NewClientInfo(config.ClientName))
+		id, secret, err := client.RegisterClient(NewClientInfo(config.ClientName, config.UserName))
 		if err != nil {
 			return nil, err
 		}
@@ -50,11 +50,11 @@ type ClientInfo struct {
 	SaaSApp     bool   `json:"saasApp"`
 }
 
-func NewClientInfo(clientName string) *ClientInfo {
+func NewClientInfo(clientName string, owner string) *ClientInfo {
 	return &ClientInfo{
 		CallbackURL: "www.google.lk",
 		ClientName:  clientName,
-		Owner:       "admin",
+		Owner:       owner,
 		GrantType:   "password refresh_token",
 		SaaSApp:     true,
 	}
@@ -117,7 +117,40 @@ func (c *Client) do(req *http.Request, v interface{}) error {
 		}
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("status(%s) != 200: %s", resp.Status, string(b))
+		return c.apiError(req, resp, b)
 	}
 	return err
+}
+
+type errorMessage struct {
+	Code        int           `json:"code"`
+	Message     string        `json:"message"`
+	Description string        `json:"description"`
+	MoreInfo    string        `json:"moreInfo"`
+	Error       []interface{} `json:"error"`
+}
+
+func (e errorMessage) String() string {
+	var errStr string
+	if len(e.Error) == 0 {
+		errStr = ""
+	} else {
+		errStr = fmt.Sprintf("%#v", e.Error)
+	}
+	return fmt.Sprintf("%s: %s (moreInfo=%v, error=%v)", e.Message, e.Description, e.MoreInfo, errStr)
+}
+
+func (c *Client) apiError(req *http.Request, resp *http.Response, body []byte) error {
+	var detail string
+	if len(body) == 0 {
+		detail = ""
+	} else {
+		var e errorMessage
+		if err := json.Unmarshal(body, &e); err != nil {
+			detail = ""
+		} else {
+			detail = fmt.Sprint(e.String())
+		}
+	}
+	return fmt.Errorf("API error.  (status=%s, detail=%s, url=%v, method=%s)", resp.Status, detail, req.URL, req.Method)
 }
