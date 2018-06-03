@@ -183,15 +183,15 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			if err := c.checkRequiredParameters(ctx, "definition", "name", "context", "version", "production-url", "gateway-env"); err != nil {
-				return err
-			}
 			if update {
 				if ctx.NArg() != 1 {
 					return errors.New("APIID is required")
 				}
+			} else {
+				if err := c.checkRequiredParameters(ctx, "definition", "name", "context", "version", "production-url", "gateway-env"); err != nil {
+					return err
+				}
 			}
-			swaggerFile := ctx.String("definition")
 
 			var api *wso2am.APIDetail
 			if update {
@@ -204,29 +204,43 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			} else {
 				api = c.client.NewAPI()
 			}
-			if err := api.SetDefinitionFromFile(swaggerFile); err != nil {
-				return err
-			}
-			api.Name = ctx.String("name")
-			api.Context = ctx.String("context")
-			api.Version = ctx.String("version")
-			api.GatewayEnvironments = ctx.String("gateway-env")
 
-			// endpoint config
-			endpointConfig := &wso2am.APIEndpointConfig{
-				Type: "http",
-			}
-			var productionURL = ctx.String("production-url")
-			var sandboxURL = ctx.String("sandbox-url")
-			endpointConfig.ProductionEndpoints = &wso2am.APIEndpoint{
-				URL: productionURL,
-			}
-			if sandboxURL != "" {
-				endpointConfig.SandboxEndpoints = &wso2am.APIEndpoint{
-					URL: sandboxURL,
+			if ctx.IsSet("swaggerFile") {
+				swaggerFile := ctx.String("definition")
+				if err := api.SetDefinitionFromFile(swaggerFile); err != nil {
+					return err
 				}
 			}
-			api.SetEndpointConfig(endpointConfig)
+			if ctx.IsSet("name") {
+				api.Name = ctx.String("name")
+			}
+			if ctx.IsSet("context") {
+				api.Context = ctx.String("context")
+			}
+			if ctx.IsSet("version") {
+				api.Version = ctx.String("version")
+			}
+			if ctx.IsSet("gateway-env") {
+				api.GatewayEnvironments = ctx.String("gateway-env")
+			}
+
+			// endpoint config
+			if ctx.IsSet("production-url") || ctx.IsSet("sandbox-url") {
+				endpointConfig := &wso2am.APIEndpointConfig{
+					Type: "http",
+				}
+				var productionURL = ctx.String("production-url")
+				var sandboxURL = ctx.String("sandbox-url")
+				endpointConfig.ProductionEndpoints = &wso2am.APIEndpoint{
+					URL: productionURL,
+				}
+				if sandboxURL != "" {
+					endpointConfig.SandboxEndpoints = &wso2am.APIEndpoint{
+						URL: sandboxURL,
+					}
+				}
+				api.SetEndpointConfig(endpointConfig)
+			}
 
 			// call API
 			var res *wso2am.APIDetail
