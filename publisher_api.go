@@ -91,6 +91,10 @@ type (
 		URL    string      `json:"url"`
 		Config interface{} `json:"config"`
 	}
+	APIUploadThumbnailResponse struct {
+		RelativePath string `json:"relativePath"`
+		MediaType    string `json:"mediaType"`
+	}
 	APIDefinition string
 	APIVisibility string
 	APITransport  string
@@ -303,6 +307,7 @@ func (c *Client) APIDefinition(id string) (map[string]interface{}, error) {
 func (c *Client) UpdateAPIDefinition(id string, definition APIDefinition) (map[string]interface{}, error) {
 	buf := new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
+	defer writer.Close()
 	w, err := writer.CreateFormField("apiDefinition")
 	if err != nil {
 		return nil, err
@@ -315,4 +320,25 @@ func (c *Client) UpdateAPIDefinition(id string, definition APIDefinition) (map[s
 		return nil, err
 	}
 	return v, nil
+}
+
+func (c *Client) UploadThumbnail(id string, thumbnail io.Reader) (*APIUploadThumbnailResponse, error) {
+	buf := new(bytes.Buffer)
+	writer := multipart.NewWriter(buf)
+	w, err := writer.CreateFormField("file")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(w, thumbnail); err != nil {
+		return nil, err
+	}
+	var v APIUploadThumbnailResponse
+	if err := c.post("api/am/publisher/v0.12/apis/"+id+"/thumbnail", "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
+func (c *Client) Thumbnail(id string, thumbnail io.Writer) error {
+	return c.get("api/am/publisher/v0.12/apis/"+id+"/thumbnail", "apim:api_view", thumbnail)
 }

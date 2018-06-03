@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -74,7 +75,7 @@ func (c *Client) get(path string, scope string, v interface{}) error {
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, nil, &v)
+	return c.do(req, nil, v)
 }
 
 func (c *Client) post(path string, scope string, body requestBody, v interface{}) error {
@@ -82,7 +83,7 @@ func (c *Client) post(path string, scope string, body requestBody, v interface{}
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, body, &v)
+	return c.do(req, body, v)
 }
 
 func (c *Client) put(path string, scope string, body requestBody, v interface{}) error {
@@ -90,7 +91,7 @@ func (c *Client) put(path string, scope string, body requestBody, v interface{})
 	if err := c.auth(scope, req); err != nil {
 		return err
 	}
-	return c.do(req, body, &v)
+	return c.do(req, body, v)
 }
 
 func (c *Client) delete(path string, scope string, v interface{}) error {
@@ -119,17 +120,29 @@ func (c *Client) do(req *http.Request, body requestBody, v interface{}) error {
 	if err != nil {
 		return c.apiError(req, resp, err)
 	}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return c.apiError(req, resp, errors.New("failed to read response body"))
-	}
-	if resp.Header.Get("Content-Type") == "application/json" {
-		if err := json.Unmarshal(b, &v); err != nil {
-			return c.apiError(req, resp, errors.New("failed to unmarshal json response body"))
+	var b []byte
+	if writer, ok := v.(io.Writer); ok {
+		if _, err := io.Copy(writer, resp.Body); err != nil {
+			return c.apiError(req, resp, errors.New("failed to read the response body"))
+		}
+	} else {
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return c.apiError(req, resp, errors.New("failed to read response body"))
+		}
+		b = data
+		if resp.Header.Get("Content-Type") == "application/json" {
+			if err := json.Unmarshal(data, &v); err != nil {
+				return c.apiError(req, resp, errors.New("failed to unmarshal json response body"))
+			}
 		}
 	}
 	if resp.StatusCode/100 != 2 {
-		return c.apiErrorWithResponseBody(req, resp, b)
+		if b != nil {
+			return c.apiErrorWithResponseBody(req, resp, b)
+		} else {
+			return c.apiError(req, resp, errors.New("failed to execute the API"))
+		}
 	}
 	return nil
 }

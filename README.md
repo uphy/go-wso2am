@@ -66,6 +66,24 @@ $ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api update \
     f9b058f7-af45-4973-91c9-5de510b71f39
 ```
 
+Update the swagger definition:
+
+```bash
+$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api update-swagger f9b058f7-af45-4973-91c9-5de510b71f39 ./swagger.json
+```
+
+Upload the thumbnail:
+
+```bash
+$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api upload-thumbnail f9b058f7-af45-4973-91c9-5de510b71f39 ./icon.jpeg
+```
+
+Download the thumbnail
+
+```bash
+$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api thumbnail f9b058f7-af45-4973-91c9-5de510b71f39 > icon.jpeg
+```
+
 Delete the API:
 
 ```bash

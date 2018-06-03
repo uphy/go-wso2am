@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	wso2am "github.com/uphy/go-wso2am"
 	"github.com/urfave/cli"
@@ -20,6 +21,8 @@ func (c *CLI) api() cli.Command {
 			c.apiInspect(),
 			c.apiSwagger(),
 			c.apiUpdateSwagger(),
+			c.apiUploadThumbnail(),
+			c.apiThumbnail(),
 			c.apiCreate(true),
 			c.apiCreate(false),
 		},
@@ -143,7 +146,7 @@ func (c *CLI) apiUpdateSwagger() cli.Command {
 		ArgsUsage: "ID SWAGGERFILE",
 		Action: func(ctx *cli.Context) error {
 			if ctx.NArg() != 2 {
-				return errors.New("ID and SWAGGERFILE is required")
+				return errors.New("ID and SWAGGERFILE are required")
 			}
 			id := ctx.Args().Get(0)
 			def, err := wso2am.NewAPIDefinitionFromFile(ctx.Args().Get(1))
@@ -151,6 +154,44 @@ func (c *CLI) apiUpdateSwagger() cli.Command {
 				return err
 			}
 			if _, err := c.client.UpdateAPIDefinition(id, def); err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+}
+
+func (c *CLI) apiThumbnail() cli.Command {
+	return cli.Command{
+		Name:  "thumbnail",
+		Usage: "Download the thumbnail",
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() != 1 {
+				return errors.New("ID is required")
+			}
+			id := ctx.Args().Get(0)
+			return c.client.Thumbnail(id, os.Stdout)
+		},
+	}
+}
+
+func (c *CLI) apiUploadThumbnail() cli.Command {
+	return cli.Command{
+		Name:      "upload-thumbnail",
+		Usage:     "Upload the thumbnail",
+		ArgsUsage: "ID FILE",
+		Action: func(ctx *cli.Context) error {
+			if ctx.NArg() != 2 {
+				return errors.New("ID and FILE are required")
+			}
+			id := ctx.Args().Get(0)
+			file := ctx.Args().Get(1)
+			f, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, err := c.client.UploadThumbnail(id, f); err != nil {
 				return err
 			}
 			return nil
