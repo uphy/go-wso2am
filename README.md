@@ -23,7 +23,8 @@ $ wso2am-cli --help
 List APIs:
 
 ```bash
-$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api listID                                   Name                Version             Description                                                       Status90ad3d5b-e535-4cb7-abfe-608e28de16b6 PizzaShackAPI       1.0.0               This is a simple API for Pizza Shack online pizza delivery store. PUBLISHED
+$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api listID
+Name                Version             Description                                                       Status90ad3d5b-e535-4cb7-abfe-608e28de16b6 PizzaShackAPI       1.0.0               This is a simple API for Pizza Shack online pizza delivery store. PUBLISHED
 ```
 
 Inspect API:
