@@ -19,6 +19,8 @@ type (
 		ClientSecret string
 		UserName     string
 		Password     string
+
+		APIVersion string
 	}
 	Client struct {
 		config *Config
@@ -26,7 +28,14 @@ type (
 	}
 )
 
+const (
+	DefaultAPIVersion = "v0.12"
+)
+
 func New(config *Config) (*Client, error) {
+	if config.APIVersion == "" {
+		config.APIVersion = DefaultAPIVersion
+	}
 	c := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

@@ -249,7 +249,7 @@ func (c *Client) SearchAPIs(query string, q *PageQuery) (*APIsResponse, error) {
 		params.Add("query", query)
 	}
 	var v APIsResponse
-	if err := c.get("api/am/publisher/v0.12/apis?"+params.Encode(), "apim:api_view", &v); err != nil {
+	if err := c.get(c.publisherURL("apis?"+params.Encode()), "apim:api_view", &v); err != nil {
 		return nil, err
 	}
 	return &v, nil
@@ -259,16 +259,16 @@ func (c *Client) ChangeAPIStatus(id string, action APIAction) error {
 	params := url.Values{}
 	params.Add("apiId", id)
 	params.Add("action", string(action))
-	return c.post("api/am/publisher/v0.12/apis/change-lifecycle?"+params.Encode(), "apim:api_publish", nil, nil)
+	return c.post(c.publisherURL("apis/change-lifecycle?"+params.Encode()), "apim:api_publish", nil, nil)
 }
 
 func (c *Client) DeleteAPI(id string) error {
-	return c.delete("api/am/publisher/v0.12/apis/"+id, "apim:api_create", nil)
+	return c.delete(c.publisherURL("apis/"+id), "apim:api_create", nil)
 }
 
 func (c *Client) API(id string) (*APIDetail, error) {
 	var v APIDetail
-	if err := c.get("api/am/publisher/v0.12/apis/"+id, "apim:api_view", &v); err != nil {
+	if err := c.get(c.publisherURL("apis/"+id), "apim:api_view", &v); err != nil {
 		return nil, err
 	}
 	return &v, nil
@@ -285,11 +285,11 @@ func (c *Client) UpdateAPI(api *APIDetail) (*APIDetail, error) {
 func (c *Client) createAPI(api *APIDetail, update bool) (*APIDetail, error) {
 	var v APIDetail
 	if update {
-		if err := c.put("api/am/publisher/v0.12/apis/"+api.ID, "apim:api_create", newJSONRequestBody(api), &v); err != nil {
+		if err := c.put(c.publisherURL("apis/"+api.ID), "apim:api_create", newJSONRequestBody(api), &v); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := c.post("api/am/publisher/v0.12/apis", "apim:api_create", newJSONRequestBody(api), &v); err != nil {
+		if err := c.post(c.publisherURL("apis"), "apim:api_create", newJSONRequestBody(api), &v); err != nil {
 			return nil, err
 		}
 	}
@@ -298,7 +298,7 @@ func (c *Client) createAPI(api *APIDetail, update bool) (*APIDetail, error) {
 
 func (c *Client) APIDefinition(id string) (map[string]interface{}, error) {
 	var v map[string]interface{}
-	if err := c.get("api/am/publisher/v0.12/apis/"+id+"/swagger", "apim:api_view", &v); err != nil {
+	if err := c.get(c.publisherURL("apis/"+id+"/swagger"), "apim:api_view", &v); err != nil {
 		return nil, err
 	}
 	return v, nil
@@ -316,7 +316,7 @@ func (c *Client) UpdateAPIDefinition(id string, definition APIDefinition) (map[s
 		return nil, err
 	}
 	var v map[string]interface{}
-	if err := c.put("api/am/publisher/v0.12/apis/"+id+"/swagger", "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
+	if err := c.put(c.publisherURL("apis/"+id+"/swagger"), "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
 		return nil, err
 	}
 	return v, nil
@@ -333,12 +333,12 @@ func (c *Client) UploadThumbnail(id string, thumbnail io.Reader) (*APIUploadThum
 		return nil, err
 	}
 	var v APIUploadThumbnailResponse
-	if err := c.post("api/am/publisher/v0.12/apis/"+id+"/thumbnail", "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
+	if err := c.post(c.publisherURL("apis/"+id+"/thumbnail"), "apim:api_create", newBinaryRequestBody(buf.Bytes(), writer.FormDataContentType()), &v); err != nil {
 		return nil, err
 	}
 	return &v, nil
 }
 
 func (c *Client) Thumbnail(id string, thumbnail io.Writer) error {
-	return c.get("api/am/publisher/v0.12/apis/"+id+"/thumbnail", "apim:api_view", thumbnail)
+	return c.get(c.publisherURL("apis/"+id+"/thumbnail"), "apim:api_view", thumbnail)
 }
