@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const Version = "0.0.1"
+const Version = "0.0.2"
 
 type CLI struct {
 	app    *cli.App
@@ -18,6 +18,7 @@ type CLI struct {
 func New() *CLI {
 	app := cli.NewApp()
 	app.Version = Version
+	app.Usage = "WSO2 API Manager product API client"
 	c := &CLI{
 		app: app,
 	}
@@ -57,6 +58,11 @@ func New() *CLI {
 			EnvVar: "WSO2_CLIENT_SECRET",
 			Value:  "", // Automatically register client
 		},
+		cli.StringFlag{
+			Name:   "apiversion,av",
+			EnvVar: "WSO2_API_VERSION",
+			Value:  wso2am.DefaultAPIVersion, // Automatically register client
+		},
 	}
 	app.Before = func(ctx *cli.Context) error {
 		carbonURL := ctx.String("url-carbon")
@@ -64,12 +70,14 @@ func New() *CLI {
 		user := ctx.String("user")
 		password := ctx.String("password")
 		clientName := ctx.String("client")
+		apiVersion := ctx.String("apiversion")
 		client, err := wso2am.New(&wso2am.Config{
 			EndpointCarbon: carbonURL,
 			EndpointToken:  tokenURL,
 			ClientName:     clientName,
 			UserName:       user,
 			Password:       password,
+			APIVersion:     apiVersion,
 		})
 		if err != nil {
 			return err

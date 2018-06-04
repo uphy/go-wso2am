@@ -26,7 +26,7 @@ type PageQuery struct {
 }
 
 func (c *Client) RegisterClient(clientInfo *ClientInfo) (clientID string, clientSecret string, err error) {
-	req, err := http.NewRequest("POST", c.endpointCarbon("client-registration/v0.12/register"), nil)
+	req, err := http.NewRequest("POST", c.endpointCarbon(fmt.Sprintf("client-registration/%s/register", c.config.APIVersion)), nil)
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(c.config.UserName, c.config.Password)
 	if err != nil {
@@ -61,4 +61,8 @@ func convert(from interface{}, to interface{}) error {
 		return err
 	}
 	return json.Unmarshal(b, to)
+}
+
+func (c *Client) publisherURL(path string) string {
+	return fmt.Sprintf("api/am/publisher/%s/%s", c.config.APIVersion, path)
 }
