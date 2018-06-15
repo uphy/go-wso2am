@@ -1,6 +1,8 @@
 # go-wso2am
 
 [![Build Status](https://travis-ci.org/uphy/go-wso2am.svg?branch=master)](https://travis-ci.org/uphy/go-wso2am)
+![Docker Build Status](https://img.shields.io/docker/build/uphy/go-wso2am.svg)
+![Docker Automated build](https://img.shields.io/docker/automated/uphy/go-wso2am.svg)
 
 WSO2 API Manager product api client.
 
@@ -8,9 +10,19 @@ WSO2 API Manager product api client.
 
 ### Install
 
+### Binary Releases
+
 Download from [release page](https://github.com/uphy/go-wso2am/releases) and extract the archive.
 
-Otherwise you can build the latest source by the following command.
+### Docker
+
+```bash
+$ docker run -t --rm uphy/wso2am-cli --help
+```
+
+### Build latest binary
+
+You can build the latest source by the following command.
 
 ```bash
 $ go get -u github.com/uphy/go-wso2am/wso2am-cli

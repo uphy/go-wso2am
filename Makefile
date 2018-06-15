@@ -5,6 +5,9 @@ build:
 	cd wso2am-cli && \
 	go build .
 
+build-image:
+	docker build -t uphy/wso2am-cli .
+
 package: clean
 	cd wso2am-cli && \
 	go get github.com/mitchellh/gox && \
