@@ -1,8 +1,8 @@
 # go-wso2am
 
 [![Build Status](https://travis-ci.org/uphy/go-wso2am.svg?branch=master)](https://travis-ci.org/uphy/go-wso2am)
-![Docker Build Status](https://img.shields.io/docker/build/uphy/go-wso2am.svg)
-![Docker Automated build](https://img.shields.io/docker/automated/uphy/go-wso2am.svg)
+![Docker Build Status](https://img.shields.io/docker/build/uphy/wso2am-cli.svg)
+![Docker Automated build](https://img.shields.io/docker/automated/uphy/wso2am-cli.svg)
 
 WSO2 API Manager product api client.
 
