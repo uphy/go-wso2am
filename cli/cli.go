@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const Version = "0.0.2"
+const Version = "0.0.4"
 
 type CLI struct {
 	app    *cli.App
