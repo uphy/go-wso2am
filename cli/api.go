@@ -204,6 +204,37 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 	var commandAliases []string
 	var commandUsage string
 	var commandArgsUsage string
+	flags := []cli.Flag{
+		cli.StringFlag{
+			Name: "definition",
+		},
+		cli.StringFlag{
+			Name: "name",
+		},
+		cli.StringFlag{
+			Name: "context",
+		},
+		cli.StringFlag{
+			Name: "version",
+		},
+		cli.StringFlag{
+			Name: "provider",
+		},
+		cli.StringFlag{
+			Name:  "production-url",
+			Value: "http://localhost/",
+		},
+		cli.StringFlag{
+			Name:  "sandbox-url",
+			Value: "http://localhost/",
+		},
+		cli.StringFlag{
+			Name: "gateway-env",
+		},
+		cli.BoolFlag{
+			Name: "publish,P",
+		},
+	}
 	if update {
 		commandName = "update"
 		commandUsage = "Update the API"
@@ -212,43 +243,16 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 		commandName = "create"
 		commandAliases = []string{"new"}
 		commandUsage = "Create the API"
+		flags = append(flags, cli.BoolFlag{
+			Name: "update",
+		})
 	}
 	return cli.Command{
 		Name:      commandName,
 		Aliases:   commandAliases,
 		Usage:     commandUsage,
 		ArgsUsage: commandArgsUsage,
-		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name: "definition",
-			},
-			cli.StringFlag{
-				Name: "name",
-			},
-			cli.StringFlag{
-				Name: "context",
-			},
-			cli.StringFlag{
-				Name: "version",
-			},
-			cli.StringFlag{
-				Name: "provider",
-			},
-			cli.StringFlag{
-				Name:  "production-url",
-				Value: "http://localhost/",
-			},
-			cli.StringFlag{
-				Name:  "sandbox-url",
-				Value: "http://localhost/",
-			},
-			cli.StringFlag{
-				Name: "gateway-env",
-			},
-			cli.BoolFlag{
-				Name: "publish,P",
-			},
-		},
+		Flags:     flags,
 		Action: func(ctx *cli.Context) error {
 			if update {
 				if ctx.NArg() != 1 {
@@ -320,10 +324,29 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 				api.SetEndpointConfig(endpointConfig)
 			}
 
+			// if "--update" is specified with create command, find the API ID and update it.
+			updateOrCreate := ctx.Bool("update")
+			if updateOrCreate {
+				// find API ID by context and version
+				apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s version:%s", api.Context, api.Version), nil)
+				if err != nil {
+					return err
+				}
+				switch apis.Count {
+				case 0:
+					// create API
+				case 1:
+					// update API
+					api.ID = apis.APIs()[0].ID
+				default:
+					return fmt.Errorf("found multiple APIs by context(%s) and version(%s)", api.Context, api.Version)
+				}
+			}
+
 			// call API
 			var res *wso2am.APIDetail
 			var err error
-			if update {
+			if update || (updateOrCreate && api.ID != "") {
 				res, err = c.client.UpdateAPI(api)
 			} else {
 				res, err = c.client.CreateAPI(api)

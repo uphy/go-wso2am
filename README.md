@@ -69,7 +69,7 @@ $ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api create \
     --name myapi \
     --context myapi \
     --version 1.0 \
-    --definition ./swagger.json
+    --definition ./swagger.json \
     --production-url http://localhost/ \
     --sandbox-url http://localhost/ \
     --gateway-env "Production and Sandbox" \
@@ -83,6 +83,22 @@ Update the published API(change the gateway environment):
 $ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api update \
     --gateway-env "Production" \
     f9b058f7-af45-4973-91c9-5de510b71f39
+```
+
+Update or create API:
+
+```bash
+$ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api create \
+    --name myapi \
+    --context myapi \
+    --version 1.0 \
+    --definition ./swagger.json \
+    --production-url http://localhost/ \
+    --sandbox-url http://localhost/ \
+    --gateway-env "Production and Sandbox" \
+    --publish \
+    --update
+f9b058f7-af45-4973-91c9-5de510b71f39
 ```
 
 Update the swagger definition:
