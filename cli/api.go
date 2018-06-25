@@ -328,18 +328,15 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			updateOrCreate := ctx.Bool("update")
 			if updateOrCreate {
 				// find API ID by context and version
-				apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s version:%s", api.Context, api.Version), nil)
+				apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s", api.Context), nil)
 				if err != nil {
 					return err
 				}
-				switch apis.Count {
-				case 0:
-					// create API
-				case 1:
-					// update API
-					api.ID = apis.APIs()[0].ID
-				default:
-					return fmt.Errorf("found multiple APIs by context(%s) and version(%s)", api.Context, api.Version)
+				for _, a := range apis.APIs() {
+					if a.Version == api.Version {
+						api.ID = a.Version
+						break
+					}
 				}
 			}
 
