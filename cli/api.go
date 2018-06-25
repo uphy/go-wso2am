@@ -334,7 +334,7 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 				}
 				for _, a := range apis.APIs() {
 					if a.Version == api.Version {
-						api.ID = a.Version
+						api.ID = a.ID
 						break
 					}
 				}
