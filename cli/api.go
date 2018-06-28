@@ -234,6 +234,9 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 		cli.BoolFlag{
 			Name: "publish,P",
 		},
+		cli.StringSliceFlag{
+			Name: "visible-role",
+		},
 	}
 	if update {
 		commandName = "update"
@@ -304,6 +307,10 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			}
 			if ctx.IsSet("provider") {
 				api.Provider = ctx.String("provider")
+			}
+			if ctx.IsSet("visible-role") {
+				api.Visibility = wso2am.APIVisibilityRestricted
+				api.VisibleRoles = ctx.StringSlice("visible-role")
 			}
 
 			// endpoint config
