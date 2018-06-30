@@ -108,8 +108,8 @@ const (
 	APIActionDeployAsPrototype  APIAction = "Deploy as a Prototype"
 	APIActionDemoteToCreated    APIAction = "Demote to Created"
 	APIActionDemoteToPrototyped APIAction = "Demote to Prototyped"
-	APIActinBlock               APIAction = "Block"
-	APIActinDeprecate           APIAction = "Deprecate"
+	APIActionBlock              APIAction = "Block"
+	APIActionDeprecate          APIAction = "Deprecate"
 	APIActionRePublish          APIAction = "Re-Publish"
 	APIActionRetire             APIAction = "Retire"
 
@@ -229,13 +229,12 @@ func NewAPIDefinitionFromYAML(r io.Reader) (APIDefinition, error) {
 func (c *Client) SearchAPIs(query string, apic chan<- API, errc chan<- error, done <-chan struct{}) {
 	var entryc = make(chan interface{})
 	go func() {
-		for {
-			for v := range entryc {
-				apic <- *c.ConvertToAPI(v)
-			}
-		}
+		defer close(entryc)
+		c.SearchAPIsRaw(query, entryc, errc, done)
 	}()
-	c.SearchAPIsRaw(query, entryc, errc, done)
+	for v := range entryc {
+		apic <- *c.ConvertToAPI(v)
+	}
 }
 
 func (c *Client) ConvertToAPI(v interface{}) *API {

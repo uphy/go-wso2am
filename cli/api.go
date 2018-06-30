@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	multierror "github.com/hashicorp/go-multierror"
 	wso2am "github.com/uphy/go-wso2am"
 	"github.com/urfave/cli"
 )
@@ -69,7 +70,7 @@ Available actions are:
 - %s
 - %s
 - %s
-`, wso2am.APIActionPublish, wso2am.APIActionDeployAsPrototype, wso2am.APIActionDemoteToCreated, wso2am.APIActionDemoteToPrototyped, wso2am.APIActinBlock, wso2am.APIActinDeprecate, wso2am.APIActionRePublish, wso2am.APIActionRetire),
+`, wso2am.APIActionPublish, wso2am.APIActionDeployAsPrototype, wso2am.APIActionDemoteToCreated, wso2am.APIActionDemoteToPrototyped, wso2am.APIActionBlock, wso2am.APIActionDeprecate, wso2am.APIActionRePublish, wso2am.APIActionRetire),
 		ArgsUsage: "ID ACTION",
 		Action: func(ctx *cli.Context) error {
 			if ctx.NArg() != 2 {
@@ -84,16 +85,86 @@ Available actions are:
 
 func (c *CLI) apiDelete() cli.Command {
 	return cli.Command{
-		Name:      "delete",
-		Aliases:   []string{"del", "rm"},
-		Usage:     "Delete the API",
-		ArgsUsage: "ID",
+		Name:    "delete",
+		Aliases: []string{"del", "rm"},
+		Usage:   "Delete the API",
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name: "all,a",
+			},
+			cli.BoolFlag{
+				Name: "force,f",
+			},
+		},
+		ArgsUsage: "ID...",
 		Action: func(ctx *cli.Context) error {
-			if ctx.NArg() != 1 {
-				return errors.New("ID is required")
+			// define rm func
+			var errs error
+			rm := func(id string) {
+				if err := c.client.DeleteAPI(id); err != nil {
+					if ctx.Bool("force") {
+						if err := c.client.ChangeAPIStatus(id, wso2am.APIActionDeprecate); err != nil {
+							errs = multierror.Append(errs, err)
+							fmt.Println(err)
+							return
+						}
+						if err := c.client.ChangeAPIStatus(id, wso2am.APIActionRetire); err != nil {
+							errs = multierror.Append(errs, err)
+							fmt.Println(err)
+							return
+						}
+						if err := c.client.DeleteAPI(id); err != nil {
+							errs = multierror.Append(errs, err)
+							fmt.Println(err)
+							return
+						}
+					} else {
+						errs = multierror.Append(errs, err)
+						fmt.Println(err)
+					}
+				} else {
+					fmt.Println(id)
+				}
 			}
-			id := ctx.Args().Get(0)
-			return c.client.DeleteAPI(id)
+
+			// delete apis
+			if ctx.Bool("all") {
+				var (
+					apic = make(chan wso2am.API)
+					errc = make(chan error)
+					done = make(chan struct{})
+				)
+				go func() {
+					defer func() {
+						close(apic)
+						close(errc)
+						close(done)
+					}()
+					c.client.SearchAPIs("", apic, errc, done)
+				}()
+			l:
+				for {
+					select {
+					case a, ok := <-apic:
+						if ok {
+							rm(a.ID)
+						} else {
+							break l
+						}
+					case err, ok := <-errc:
+						if ok {
+							errs = multierror.Append(errs, err)
+						} else {
+							break l
+						}
+					}
+				}
+			} else {
+				for _, id := range ctx.Args() {
+					rm(id)
+				}
+			}
+			return errs
 		},
 	}
 }
@@ -337,19 +408,9 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 				if err != nil {
 					return err
 				}
-				api.ID = a.ID
-				/*
-					apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s", api.Context), nil)
-					if err != nil {
-						return err
-					}
-					for _, a := range apis.APIs() {
-						if a.Version == api.Version {
-							api.ID = a.ID
-							break
-						}
-					}
-				*/
+				if a != nil {
+					api.ID = a.ID
+				}
 			}
 
 			// call API

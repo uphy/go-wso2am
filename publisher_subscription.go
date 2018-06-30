@@ -34,13 +34,12 @@ func (a *SubscriptionResponse) Subscriptions() []Subscription {
 func (c *Client) SubscriptionsByAPI(id string, subc chan<- Subscription, errc chan<- error, done <-chan struct{}) {
 	var entryc = make(chan interface{})
 	go func() {
-		for {
-			for v := range entryc {
-				subc <- *c.ConvertToSubscription(v)
-			}
-		}
+		defer close(entryc)
+		c.SubscriptionsByAPIRaw(id, entryc, errc, done)
 	}()
-	c.SubscriptionsByAPIRaw(id, entryc, errc, done)
+	for v := range entryc {
+		subc <- *c.ConvertToSubscription(v)
+	}
 }
 
 func (c *Client) ConvertToSubscription(v interface{}) *Subscription {
