@@ -31,12 +31,32 @@ func (a *SubscriptionResponse) Subscriptions() []Subscription {
 	return s
 }
 
-func (c *Client) Subscriptions(q *PageQuery) (*SubscriptionResponse, error) {
-	return c.SubscriptionsByAPI("", q)
+func (c *Client) SubscriptionsByAPI(id string, subc chan<- Subscription, errc chan<- error, done <-chan struct{}) {
+	var entryc = make(chan interface{})
+	go func() {
+		for {
+			for v := range entryc {
+				subc <- *c.ConvertToSubscription(v)
+			}
+		}
+	}()
+	c.SubscriptionsByAPIRaw(id, entryc, errc, done)
 }
 
-func (c *Client) SubscriptionsByAPI(id string, q *PageQuery) (*SubscriptionResponse, error) {
-	var v SubscriptionResponse
+func (c *Client) ConvertToSubscription(v interface{}) *Subscription {
+	var a Subscription
+	convert(v, &a)
+	return &a
+}
+
+func (c *Client) SubscriptionsByAPIRaw(id string, entryc chan<- interface{}, errc chan<- error, done <-chan struct{}) {
+	c.search(entryc, errc, done, func(q *PageQuery) (*PageResponse, error) {
+		return c.subscriptionsByAPI(id, q)
+	})
+}
+
+func (c *Client) subscriptionsByAPI(id string, q *PageQuery) (*PageResponse, error) {
+	var v PageResponse
 	var params = pageQueryParams(q)
 	if id != "" {
 		params.Add("apiId", id)

@@ -29,15 +29,15 @@ func (c *CLI) subscriptionList() cli.Command {
 		Usage:     "List subscriptions",
 		ArgsUsage: "[API ID]",
 		Action: func(ctx *cli.Context) error {
-			resp, err := c.client.SubscriptionsByAPI(ctx.Args().First(), nil)
-			if err != nil {
-				return err
-			}
-			f := newTableFormatter("ID", "ApplicationID", "APIID", "Status")
-			for _, s := range resp.Subscriptions() {
-				f.Row(s.ID, s.ApplicationID, s.APIIdentifier, s.Status)
-			}
-			return nil
+			id := ctx.Args().First()
+			return list(func(entryc chan<- interface{}, errc chan<- error, done <-chan struct{}) {
+				c.client.SubscriptionsByAPIRaw(id, entryc, errc, done)
+			}, func(table *TableFormatter) {
+				table.Header("ID", "ApplicationID", "APIID", "Status")
+			}, func(entry interface{}, table *TableFormatter) {
+				s := c.client.ConvertToSubscription(entry)
+				table.Row(s.ID, s.ApplicationID, s.APIIdentifier, s.Status)
+			})
 		},
 	}
 }

@@ -12,11 +12,14 @@ type TableFormatter struct {
 	w *tabwriter.Writer
 }
 
-func newTableFormatter(column ...interface{}) *TableFormatter {
+func newTableFormatter() *TableFormatter {
 	w := tabwriter.NewWriter(os.Stdout, 20, 1, 1, ' ', 0)
 	f := &TableFormatter{w}
-	f.Row(column...)
 	return f
+}
+
+func (f *TableFormatter) Header(headers ...interface{}) {
+	f.Row(headers...)
 }
 
 func (f *TableFormatter) Row(v ...interface{}) {

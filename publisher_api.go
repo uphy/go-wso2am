@@ -16,9 +16,6 @@ import (
 )
 
 type (
-	APIsResponse struct {
-		PageResponse
-	}
 	API struct {
 		ID           string    `json:"id"`
 		Name         string    `json:"name"`
@@ -229,26 +226,34 @@ func NewAPIDefinitionFromYAML(r io.Reader) (APIDefinition, error) {
 	return APIDefinition(j), nil
 }
 
-func (a *APIsResponse) APIs() []API {
-	s := []API{}
-	for _, elm := range a.List {
-		var v API
-		convert(elm, &v)
-		s = append(s, v)
-	}
-	return s
+func (c *Client) SearchAPIs(query string, apic chan<- API, errc chan<- error, done <-chan struct{}) {
+	var entryc = make(chan interface{})
+	go func() {
+		for {
+			for v := range entryc {
+				apic <- *c.ConvertToAPI(v)
+			}
+		}
+	}()
+	c.SearchAPIsRaw(query, entryc, errc, done)
 }
 
-func (c *Client) APIs(q *PageQuery) (*APIsResponse, error) {
-	return c.SearchAPIs("", q)
+func (c *Client) ConvertToAPI(v interface{}) *API {
+	var a API
+	convert(v, &a)
+	return &a
 }
 
-func (c *Client) SearchAPIs(query string, q *PageQuery) (*APIsResponse, error) {
+func (c *Client) SearchAPIsRaw(query string, entryc chan<- interface{}, errc chan<- error, done <-chan struct{}) {
+	c.search(entryc, errc, done, func(q *PageQuery) (*PageResponse, error) {
+		return c.searchAPIs(query, q)
+	})
+}
+
+func (c *Client) searchAPIs(query string, q *PageQuery) (*PageResponse, error) {
 	params := pageQueryParams(q)
-	if query != "" {
-		params.Add("query", query)
-	}
-	var v APIsResponse
+	params.Add("query", query)
+	var v PageResponse
 	if err := c.get(c.publisherURL("apis?"+params.Encode()), "apim:api_view", &v); err != nil {
 		return nil, err
 	}

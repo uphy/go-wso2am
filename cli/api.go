@@ -42,16 +42,14 @@ func (c *CLI) apiList() cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			var query = ctx.String("query")
-			resp, err := c.client.SearchAPIs(query, nil)
-			if err != nil {
-				return err
-			}
-			f := newTableFormatter("ID", "Name", "Version", "Description", "Status")
-			for _, api := range resp.APIs() {
-				f.Row(api.ID, api.Name, api.Version, api.Description, api.Status)
-			}
-			f.Flush()
-			return nil
+			return list(func(entryc chan<- interface{}, errc chan<- error, done <-chan struct{}) {
+				c.client.SearchAPIsRaw(query, entryc, errc, done)
+			}, func(table *TableFormatter) {
+				table.Header("ID", "Name", "Version", "Description", "Status")
+			}, func(entry interface{}, table *TableFormatter) {
+				api := c.client.ConvertToAPI(entry)
+				table.Row(api.ID, api.Name, api.Version, api.Description, api.Status)
+			})
 		},
 	}
 }
@@ -335,16 +333,23 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			updateOrCreate := ctx.Bool("update")
 			if updateOrCreate {
 				// find API ID by context and version
-				apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s", api.Context), nil)
+				a, err := c.findAPIByContextVersion(api.Context, api.Version)
 				if err != nil {
 					return err
 				}
-				for _, a := range apis.APIs() {
-					if a.Version == api.Version {
-						api.ID = a.ID
-						break
+				api.ID = a.ID
+				/*
+					apis, err := c.client.SearchAPIs(fmt.Sprintf("context:%s", api.Context), nil)
+					if err != nil {
+						return err
 					}
-				}
+					for _, a := range apis.APIs() {
+						if a.Version == api.Version {
+							api.ID = a.ID
+							break
+						}
+					}
+				*/
 			}
 
 			// call API
@@ -371,4 +376,20 @@ func (c *CLI) apiCreate(update bool) cli.Command {
 			return nil
 		},
 	}
+}
+
+func (c *CLI) findAPIByContextVersion(context, version string) (*wso2am.API, error) {
+	result, err := c.client.SearchResultToSlice(func(entryc chan<- interface{}, errc chan<- error, done <-chan struct{}) {
+		c.client.SearchAPIsRaw(fmt.Sprintf("context:%s", context), entryc, errc, done)
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range result {
+		api := c.client.ConvertToAPI(v)
+		if api.Version == version {
+			return api, nil
+		}
+	}
+	return nil, nil
 }
