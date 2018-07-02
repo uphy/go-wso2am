@@ -448,7 +448,7 @@ func (c *CLI) findAPIByContextVersion(context, version string) (*wso2am.API, err
 	}
 	for _, v := range result {
 		api := c.client.ConvertToAPI(v)
-		if api.Version == version {
+		if api.Context == context && api.Version == version {
 			return api, nil
 		}
 	}
