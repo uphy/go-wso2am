@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	multierror "github.com/hashicorp/go-multierror"
 	wso2am "github.com/uphy/go-wso2am"
@@ -31,6 +32,26 @@ func (c *CLI) api() cli.Command {
 }
 
 func (c *CLI) apiList() cli.Command {
+	trim := func(s string, maxWidth int) string {
+		s = strings.Replace(s, "\r\n", "\\n", -1)
+		s = strings.Replace(s, "\n", "\\n", -1)
+		s = strings.Replace(s, "\r", "\\n", -1)
+		width := 0
+		runes := []rune(s)
+		result := []rune{}
+		for _, r := range runes {
+			if r < 0x80 {
+				width++
+			} else {
+				width += 2
+			}
+			if width > maxWidth {
+				break
+			}
+			result = append(result, r)
+		}
+		return string(result)
+	}
 	return cli.Command{
 		Name:    "list",
 		Aliases: []string{"ls", "dir"},
@@ -49,7 +70,7 @@ func (c *CLI) apiList() cli.Command {
 				table.Header("ID", "Name", "Version", "Description", "Status")
 			}, func(entry interface{}, table *TableFormatter) {
 				api := c.client.ConvertToAPI(entry)
-				table.Row(api.ID, api.Name, api.Version, api.Description, api.Status)
+				table.Row(api.ID, api.Name, api.Version, trim(api.Description, 30), api.Status)
 			})
 		},
 	}
@@ -446,9 +467,18 @@ func (c *CLI) findAPIByContextVersion(context, version string) (*wso2am.API, err
 	if err != nil {
 		return nil, err
 	}
+	normalizeContext := func(context string) string {
+		if strings.HasPrefix(context, "/") {
+			context = context[1:]
+		}
+		if strings.HasSuffix(context, "/") {
+			context = context[1 : len(context)-1]
+		}
+		return context
+	}
 	for _, v := range result {
 		api := c.client.ConvertToAPI(v)
-		if api.Context == context && api.Version == version {
+		if normalizeContext(api.Context) == normalizeContext(context) && api.Version == version {
 			return api, nil
 		}
 	}
