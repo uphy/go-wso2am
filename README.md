@@ -98,7 +98,6 @@ $ WSO2_USERNAME=user1 WSO2_PASSWORD=user1 wso2am-cli api create \
     --gateway-env "Production and Sandbox" \
     --publish \
     --update
-f9b058f7-af45-4973-91c9-5de510b71f39
 ```
 
 Update the swagger definition:
